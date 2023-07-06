@@ -36,6 +36,5 @@ class net(nn.Module):
         x = self.hid2(x)
         x = self.relu(x)
         x = self.hid3(x)
-        x = self.relu(x)
         x = self.sigmoid(self.output(x))
         return x

@@ -1,2 +1,4 @@
 /__pycache__
 /.idea
+*.pyc
+train_data.pkl
