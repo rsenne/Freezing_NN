@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pykalman
 from joblib import Parallel, delayed
+from itertools import combinations
 
 __all__ = ["anymazeResults", "dlcResults", "BehavioralDataManager"]
 
@@ -138,3 +139,47 @@ class BehavioralDataManager:
         self.labels = pd.concat(labels_list, ignore_index=True)
 
         return self.features, self.labels
+
+    def calculate_movement(self, df, bpart):
+        df[(bpart, 'movement')] = np.sqrt((df[(bpart, 'x')].diff())**2 + (df[(bpart, 'y')].diff())**2)
+        return df
+
+    def calculate_distance(self, df, bpart1, bpart2):
+        df[(f'{bpart1}_{bpart2}', 'distance')] = np.sqrt((df[(bpart1, 'x')] - df[(bpart2, 'x')])**2 + 
+                                                         (df[(bpart1, 'y')] - df[(bpart2, 'y')])**2)
+        return df
+
+    def calculate_angle(self, bpart1, bpart2, bpart3):
+        df = self.features
+        vector_1 = np.array([df[(bpart1, 'x')] - df[(bpart2, 'x')], df[(bpart1, 'y')] - df[(bpart2, 'y')]])
+        vector_2 = np.array([df[(bpart3, 'x')] - df[(bpart2, 'x')], df[(bpart3, 'y')] - df[(bpart2, 'y')]])
+
+        # normalize the vectors
+        vector_1 /= np.linalg.norm(vector_1, axis=0)
+        vector_2 /= np.linalg.norm(vector_2, axis=0)
+    
+        # compute the dot product element-wise
+        dot_product = np.sum(vector_1 * vector_2, axis=0)
+    
+        # clip the values to avoid getting NaN from arccos
+        dot_product = np.clip(dot_product, -1.0, 1.0)
+
+        angle = np.arccos(dot_product)
+
+        df[(f'angle_{bpart1}_{bpart2}_{bpart3}', 'angle')] = np.degrees(angle)
+        return df
+
+    def feature_engineering(self):
+        bparts = ['snout', 'l_ear', 'r_ear', 'front_l_paw', 'front_r_paw', 'back_l_paw', 'back_r_paw', 
+                  'base_of_tail', 'tip_of_tail']
+
+        for bpart in bparts:
+            self.features = self.calculate_movement(self.features, bpart)
+
+        for pair in combinations(bparts, 2):
+            self.features = self.calculate_distance(self.features, *pair)
+
+        for triplet in combinations(bparts, 3):
+            self.features = self.calculate_angle(*triplet)
+
+        return self.features
