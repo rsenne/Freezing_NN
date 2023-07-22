@@ -8,3 +8,4 @@ seaborn~=0.11.2
 statsmodels~=0.13.2
 pykalman~=0.9.5
 joblib~=1.2.0
+scikit-learn~=1.2.2
